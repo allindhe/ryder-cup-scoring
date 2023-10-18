@@ -44,48 +44,49 @@ window.addEventListener("DOMContentLoaded", () => {
 
 // TRIGGERS
 async function selectPlayer() {
+  // If best ball was selected
+  if (sthlmPlayerId == "best") {
+    $("input[id=bestball]:checked").prop("checked", false);
+    scoreboard.removeClass("unfocusScoreboard");
+    matchBoard.removeClass("showBoard");
+    sthlmPlayerId = "";
+    gbgPlayerId = "";
+  }
+
   sthlmPlayerId = $("input[name=sthlmPlayer]:checked").attr("id");
   gbgPlayerId = $("input[name=gbgPlayer]:checked").attr("id");
 
-  // If best ball was selected
-  $("input[id=bestball]:checked").prop("checked", false);
-  if (!sthlmPlayerId || !gbgPlayerId) {
-    scoreboard.removeClass("unfocusScoreboard");
-    matchBoard.removeClass("showBoard");
-  }
-
   if (sthlmPlayerId && gbgPlayerId) {
-    // Get player match
-    const response = await fetch(
-      "/match?" +
-        new URLSearchParams({
-          player1: sthlmPlayerId,
-          player2: gbgPlayerId,
-        })
-    );
-    if (response.status != 200) {
-      console.log("Status: " + response.status.toString() + " " + response.statusText);
-      return;
-    }
-
-    const score = await response.json();
-    drawMatchBoard(score);
-
-    // Unfocus scoreboard
-    scoreboard.addClass("unfocusScoreboard");
-    matchBoard.addClass("showBoard");
+    await getMatchAndUpdateBoard();
   }
 }
 
 async function bestBall() {
-  clearPlayers();
+  $("input[name=sthlmPlayer]:checked").prop("checked", false);
+  $("input[name=gbgPlayer]:checked").prop("checked", false);
+  sthlmPlayerId = "best";
+  gbgPlayerId = "ball";
 
-  // Get best ball match
+  await getMatchAndUpdateBoard();
+}
+
+function clearPlayers() {
+  $("input[name=sthlmPlayer]:checked").prop("checked", false);
+  sthlmPlayerId = "";
+  $("input[name=gbgPlayer]:checked").prop("checked", false);
+  gbgPlayerId = "";
+  scoreboard.removeClass("unfocusScoreboard");
+  matchBoard.removeClass("showBoard");
+}
+
+// FUNCTIONS
+async function getMatchAndUpdateBoard() {
+  // Get player match
   const response = await fetch(
     "/match?" +
       new URLSearchParams({
-        player1: "best",
-        player2: "ball",
+        player1: sthlmPlayerId,
+        player2: gbgPlayerId,
       })
   );
   if (response.status != 200) {
@@ -101,16 +102,6 @@ async function bestBall() {
   matchBoard.addClass("showBoard");
 }
 
-function clearPlayers() {
-  $("input[name=sthlmPlayer]:checked").prop("checked", false);
-  sthlmPlayerId = "";
-  $("input[name=gbgPlayer]:checked").prop("checked", false);
-  gbgPlayerId = "";
-  scoreboard.removeClass("unfocusScoreboard");
-  matchBoard.removeClass("showBoard");
-}
-
-// FUNCTIONS
 async function updateMatchBoard(row, column) {
   if (matchBoardTbody[0].rows[row].cells[column].classList.contains("checked")) {
     return; // Cell already selected, score not updated

@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+
+	"google.golang.org/api/iterator"
 )
 
 type Score struct {
@@ -13,8 +15,8 @@ type Score struct {
 
 type Match struct {
 	// score: 0 = not played, 1 = team 1, 2 = draw, 3 = team 2
-	score  [9]int
-	result float32
+	Score  [9]int
+	Result float32
 }
 
 type updateMatchStruct struct {
@@ -29,26 +31,28 @@ var matches map[string]*Match
 var team1 = [3]string{"tom", "alex", "rasmus"}
 var team2 = [3]string{"sebbe", "emil", "jean"}
 
-func init() {
-	clearMatches()
-}
-
 func clearMatches() {
-	totalScore.Team1 = 0
-	totalScore.Team2 = 0
+	_, err := client.Collection("score").Doc("score").Set(ctx, Score{})
+	if err != nil {
+		fmt.Printf("Err clearing score: %s", err)
+	}
 
-	matches = make(map[string]*Match)
+	// matches = make(map[string]*Match)
 
 	for _, id1 := range team1 {
 		for _, id2 := range team2 {
-			newMatch := Match{}
-			matches[id1+id2] = &newMatch
+			_, err = client.Collection("matches").Doc(id1+id2).Set(ctx, Match{})
+			if err != nil {
+				fmt.Printf("Err clearing match: %s", err)
+			}
 		}
 	}
 
 	// Create a special one for best ball
-	newMatch := Match{}
-	matches["bestball"] = &newMatch
+	_, err = client.Collection("matches").Doc("bestball").Set(ctx, Match{})
+	if err != nil {
+		fmt.Printf("Err clearing match: %s", err)
+	}
 }
 
 func getClearMatches(w http.ResponseWriter, r *http.Request) {
@@ -58,6 +62,15 @@ func getClearMatches(w http.ResponseWriter, r *http.Request) {
 }
 
 func getTotalScore(w http.ResponseWriter, r *http.Request) {
+	dsnap, err := client.Collection("score").Doc("score").Get(ctx)
+	if err != nil {
+		fmt.Println(err)
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	var totalScore Score
+	dsnap.DataTo(&totalScore)
+
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(totalScore)
@@ -75,14 +88,18 @@ func getMatchHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		pmatch, ok := matches[player1+player2]
-		if ok {
-			w.Header().Set("Content-Type", "application/json")
-			w.WriteHeader(http.StatusOK)
-			json.NewEncoder(w).Encode(pmatch.score)
-		} else {
+		dsnap, err := client.Collection("matches").Doc(player1 + player2).Get(ctx)
+		if err != nil {
+			fmt.Println(err)
 			w.WriteHeader(http.StatusInternalServerError)
+			return
 		}
+		var match Match
+		dsnap.DataTo(&match)
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		json.NewEncoder(w).Encode(match.Score)
+
 	case http.MethodPost:
 		// Create a new record.
 	case http.MethodPut:
@@ -93,20 +110,26 @@ func getMatchHandler(w http.ResponseWriter, r *http.Request) {
 		if err != nil {
 			fmt.Println("Invalid put format")
 			w.WriteHeader(http.StatusInternalServerError)
+			return
 		}
 
-		pMatch, ok := matches[t.Player1+t.Player2]
-		if ok {
-			if len(t.Score) == 9 {
-				for i, val := range t.Score {
-					pMatch.score[i] = val
-				}
+		tmpMatch := Match{}
+		if len(t.Score) == 9 {
+			for i, val := range t.Score {
+				tmpMatch.Score[i] = val
 			}
-		} else {
-			w.WriteHeader(http.StatusInternalServerError)
+		}
+		updateResult(&tmpMatch)
+
+		_, err = client.Collection("matches").Doc(t.Player1+t.Player2).Set(ctx, tmpMatch)
+		if err != nil {
+			if err != nil {
+				fmt.Println(err)
+				w.WriteHeader(http.StatusInternalServerError)
+				return
+			}
 		}
 
-		updateScore(pMatch)
 		updateTotalScore()
 
 	case http.MethodDelete:
@@ -117,9 +140,9 @@ func getMatchHandler(w http.ResponseWriter, r *http.Request) {
 
 }
 
-func updateScore(pMatch *Match) {
+func updateResult(pMatch *Match) {
 	localScore := 0
-	for _, val := range pMatch.score {
+	for _, val := range pMatch.Score {
 		if val == 0 {
 			// Only count finished matches
 			return
@@ -128,30 +151,45 @@ func updateScore(pMatch *Match) {
 	}
 
 	if localScore == 0 {
-		pMatch.result = 2
+		pMatch.Result = 2
 	} else if localScore < 0 {
-		pMatch.result = 1
+		pMatch.Result = 1
 	} else {
-		pMatch.result = 3
+		pMatch.Result = 3
 	}
 }
 
 func updateTotalScore() {
-	localScore1 := float32(0)
-	localScore2 := float32(0)
+	score := Score{}
 
-	for _, match := range matches {
-		switch match.result {
+	// Get all matches
+	iter := client.Collection("matches").Documents(ctx)
+	for {
+		doc, err := iter.Next()
+		if err == iterator.Done {
+			break
+		}
+		if err != nil {
+			fmt.Println(err)
+		}
+
+		match := Match{}
+		doc.DataTo(&match)
+
+		switch match.Result {
 		case 1:
-			localScore1++
+			score.Team1++
 		case 2:
-			localScore1 += 0.5
-			localScore2 += 0.5
+			score.Team1 += 0.5
+			score.Team2 += 0.5
 		case 3:
-			localScore2++
+			score.Team2++
 		}
 	}
 
-	totalScore.Team1 = localScore1
-	totalScore.Team2 = localScore2
+	// Write total score to db
+	_, err := client.Collection("score").Doc("score").Set(ctx, score)
+	if err != nil {
+		fmt.Printf("Err writing score: %s", err)
+	}
 }

@@ -96,3 +96,15 @@ td {
 #matchBoard tr:nth-child(3) td.checked {
   background-color: var(--usColor);
 }
+
+@media (max-width: 767px) {
+  h1 {
+    font-size: 7vh;
+  }
+  .scoreboard {
+    font-size: 10vh;
+    line-height: 15vh;
+    font-weight: 700;
+    letter-spacing: -2.02px;
+  }
+}
