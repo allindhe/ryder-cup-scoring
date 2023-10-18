@@ -1,0 +1,98 @@
+:root {
+  --usColor: #c81414;
+  --euColor: #003c82;
+}
+
+body {
+  background-color: #3f4859;
+}
+
+h1 {
+  color: #fff;
+
+  font-family: Gotham;
+  font-size: 10vh;
+  font-weight: 700;
+  text-align: center;
+}
+th,
+td {
+  height: 100%;
+  transition: background-color 0.5s linear;
+}
+
+.scoreboard {
+  display: flex;
+  color: #fff;
+
+  height: 15vh;
+  width: 100%;
+
+  transition-property: height;
+  transition-duration: 1.5s;
+  transition-timing-function: ease-in-out;
+
+  font-family: Gotham;
+  font-size: 15vh;
+  line-height: 15vh;
+  font-weight: 700;
+  letter-spacing: -2.02px;
+}
+
+.team1,
+.team2 {
+  transition-property: width, font-size, line-height;
+  transition-duration: 1.5s;
+  transition-timing-function: ease-in-out;
+}
+.scoreText {
+  padding-right: 10px;
+  padding-left: 5px;
+  position: absolute;
+}
+.team1 {
+  height: 100%;
+  width: 50%;
+  background-color: var(--euColor);
+}
+.team2 {
+  height: 100%;
+  width: 50%;
+  background-color: var(--usColor);
+  text-align: right;
+  display: flex;
+  justify-content: end;
+}
+
+.scoreboard.unfocusScoreboard {
+  height: 10vh;
+  font-size: 10vh;
+  line-height: 10vh;
+}
+
+#matchBoard {
+  cursor: pointer;
+
+  visibility: hidden;
+  opacity: 0;
+  transition: visibility 1s, opacity 1s linear;
+}
+
+#matchBoard tr {
+  height: 5vh;
+}
+
+#matchBoard.showBoard {
+  visibility: visible;
+  opacity: 1;
+}
+
+#matchBoard tr:nth-child(1) td.checked {
+  background-color: var(--euColor);
+}
+#matchBoard tr:nth-child(2) td.checked {
+  background-color: grey;
+}
+#matchBoard tr:nth-child(3) td.checked {
+  background-color: var(--usColor);
+}
