@@ -4,7 +4,7 @@
 }
 
 body {
-  background-color: #3f4859;
+  background-color: rgb(53, 54, 58);
 }
 
 h1 {
@@ -97,6 +97,13 @@ td {
   background-color: var(--usColor);
 }
 
+label.btn,
+button.btn {
+  min-width: 120px;
+  font-weight: 700;
+  color: lightgray;
+}
+
 @media (max-width: 767px) {
   h1 {
     font-size: 7vh;
@@ -106,5 +113,9 @@ td {
     line-height: 15vh;
     font-weight: 700;
     letter-spacing: -2.02px;
+  }
+  label.btn,
+  button.btn {
+    min-width: 100px;
   }
 }
