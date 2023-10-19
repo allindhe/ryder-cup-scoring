@@ -70,6 +70,18 @@ td {
   line-height: 10vh;
 }
 
+#holes {
+  text-align: center;
+  color: #fff;
+  font-family: Gotham;
+  font-weight: 500;
+
+  cursor: pointer;
+
+  visibility: hidden;
+  opacity: 0;
+  transition: visibility 1s, opacity 1s linear;
+}
 #matchBoard {
   cursor: pointer;
 
@@ -82,7 +94,9 @@ td {
   height: 5vh;
 }
 
-#matchBoard.showBoard {
+#matchBoard.showBoard,
+#holes.showBoard,
+#matchScore.showBoard {
   visibility: visible;
   opacity: 1;
 }
@@ -91,10 +105,24 @@ td {
   background-color: var(--euColor);
 }
 #matchBoard tr:nth-child(2) td.checked {
-  background-color: grey;
+  background-color: #808080;
 }
 #matchBoard tr:nth-child(3) td.checked {
   background-color: var(--usColor);
+}
+
+#matchScore {
+  visibility: hidden;
+  opacity: 0;
+  transition-property: visibility, opacity;
+  transition-duration: 1s;
+  transition-timing-function: linear;
+  height: 5vh;
+
+  font-family: Gotham;
+  font-weight: 1000;
+  font-size: 6vh;
+  text-shadow: 2px 2px 1px black;
 }
 
 label.btn,

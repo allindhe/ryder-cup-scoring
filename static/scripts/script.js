@@ -6,6 +6,9 @@ let scoreboardP2;
 
 let matchBoard;
 let matchBoardTbody;
+let holesTable;
+let matchScoreDiv;
+let matchScoreP;
 
 let sthlmPlayerId = "";
 let gbgPlayerId = "";
@@ -23,6 +26,9 @@ window.addEventListener("DOMContentLoaded", () => {
   scoreboardP2 = $(".team2 p");
   matchBoard = $("#matchBoard");
   matchBoardTbody = $("#matchBoard tbody");
+  holesTable = $("#holes");
+  matchScoreDiv = $("#matchScore");
+  matchScoreP = $("#matchScore p");
 
   // Update scoreboard
   getTotalScore();
@@ -47,8 +53,7 @@ async function selectPlayer() {
   // If best ball was selected
   if (sthlmPlayerId == "best") {
     $("input[id=bestball]:checked").prop("checked", false);
-    scoreboard.removeClass("unfocusScoreboard");
-    matchBoard.removeClass("showBoard");
+    focusScoreboard(false);
     sthlmPlayerId = "";
     gbgPlayerId = "";
   }
@@ -75,8 +80,8 @@ function clearPlayers() {
   sthlmPlayerId = "";
   $("input[name=gbgPlayer]:checked").prop("checked", false);
   gbgPlayerId = "";
-  scoreboard.removeClass("unfocusScoreboard");
-  matchBoard.removeClass("showBoard");
+  $("input[id=bestball]:checked").prop("checked", false);
+  focusScoreboard(true);
 }
 
 // FUNCTIONS
@@ -98,28 +103,36 @@ async function getMatchAndUpdateBoard() {
   drawMatchBoard(score);
 
   // Unfocus scoreboard
-  scoreboard.addClass("unfocusScoreboard");
-  matchBoard.addClass("showBoard");
+  focusScoreboard(false);
 }
 
 async function updateMatchBoard(row, column) {
-  if (matchBoardTbody[0].rows[row].cells[column].classList.contains("checked")) {
-    return; // Cell already selected, score not updated
-  }
   if (!sthlmPlayerId || !gbgPlayerId) {
     return; // Players not selected
   }
 
   // Update score
-  localTotalScore += row - 1;
-  localScore[column] = row + 1;
+  if (matchBoardTbody[0].rows[row].cells[column].classList.contains("checked")) {
+    // Cell already selected, reduce score
+    localScore[column] = 0;
+  } else {
+    localScore[column] = row + 1;
+  }
+
+  // Update table selections
   for (let i = 0; i < 3; i++) {
     if (i == row) {
-      matchBoardTbody[0].rows[i].cells[column].classList.add("checked");
+      matchBoardTbody[0].rows[i].cells[column].classList.toggle("checked");
     } else {
       matchBoardTbody[0].rows[i].cells[column].classList.remove("checked");
     }
   }
+  localTotalScore = localScore.reduce((tot, val) => {
+    addVal = val > 0 ? val - 2 : 0;
+    return tot + addVal;
+  }, 0);
+
+  updateMatchTotalScore();
 
   // Post score to server
   const dataToSend = JSON.stringify({ player1: sthlmPlayerId, player2: gbgPlayerId, score: localScore });
@@ -153,6 +166,7 @@ function drawMatchBoard(score) {
     }
   }
 
+  updateMatchTotalScore();
   getTotalScore();
 }
 
@@ -174,4 +188,38 @@ async function getTotalScore() {
 
   scoreboardP1[0].textContent = totalScore.Team1;
   scoreboardP2[0].textContent = totalScore.Team2;
+}
+
+function focusScoreboard(bool) {
+  if (bool) {
+    scoreboard.removeClass("unfocusScoreboard");
+    matchBoard.removeClass("showBoard");
+    holesTable.removeClass("showBoard");
+    matchScoreDiv.removeClass("showBoard");
+  } else {
+    scoreboard.addClass("unfocusScoreboard");
+    matchBoard.addClass("showBoard");
+    holesTable.addClass("showBoard");
+    matchScoreDiv.addClass("showBoard");
+  }
+}
+
+function updateMatchTotalScore() {
+  // Update total match score
+  if (localTotalScore == 0) {
+    matchScoreP[0].style.color = "#808080";
+    matchScoreP[0].style.textAlign = "center";
+
+    matchScoreP[0].textContent = "A/S";
+  } else if (localTotalScore < 0) {
+    matchScoreP[0].style.color = "#003c82";
+    matchScoreP[0].style.textAlign = "left";
+
+    matchScoreP[0].textContent = -localTotalScore.toString();
+  } else {
+    matchScoreP[0].style.color = "#c81414";
+    matchScoreP[0].style.textAlign = "right";
+
+    matchScoreP[0].textContent = localTotalScore.toString();
+  }
 }
